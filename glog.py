@@ -4,6 +4,9 @@ import logging
 import time
 import traceback
 import os
+import random
+import hashlib
+from collections import defaultdict
 
 import gflags as flags
 
@@ -39,13 +42,12 @@ class GlogFormatter(logging.Formatter):
         date_usec = (record.created - int(record.created)) * 1e6
         record_message = '%c%02d%02d %02d:%02d:%02d.%06d %s %s:%d] %s' % (
             level, date.tm_mon, date.tm_mday, date.tm_hour, date.tm_min,
-            date.tm_sec, date_usec,
-            record.process if record.process is not None else '?????',
-            record.filename,
-            record.lineno,
-            format_message(record))
+            date.tm_sec, date_usec, record.process
+            if record.process is not None else '?????', record.filename,
+            record.lineno, format_message(record))
         record.getMessage = lambda: record_message
         return logging.Formatter.format(self, record)
+
 
 logger = logging.getLogger()
 handler = logging.StreamHandler()
@@ -59,21 +61,43 @@ def setLevel(newlevel):
 def init():
     setLevel(FLAGS.verbosity)
 
-debug = logging.debug
-info = logging.info
-warning = logging.warning
-warn = logging.warning
-error = logging.error
-exception = logging.exception
-fatal = logging.fatal
-log = logging.log
 
-DEBUG = logging.DEBUG
-INFO = logging.INFO
-WARNING = logging.WARNING
-WARN = logging.WARN
-ERROR = logging.ERROR
-FATAL = logging.FATAL
+def log_wrapper(name):
+    counter = defaultdict(int)
+
+    def conditional_log(*args, **kwargs):
+        sampling = kwargs.pop('sampling', 100)
+        first_n = kwargs.pop('first_n', -1)
+
+        if sampling < 100:
+            if sampling < random.random() * 100:
+                return
+        if first_n > 0:
+            key = hashlib.md5(args[0].encode('utf-8')).hexdigest()
+            if counter[key] > first_n:
+                return
+            counter[key] += 1
+
+        return getattr(logging, name)(*args)
+
+    return conditional_log
+
+
+debug = log_wrapper('debug')
+info = log_wrapper('info')
+warning = log_wrapper('warning')
+warn = log_wrapper('warning')
+error = log_wrapper('error')
+exception = log_wrapper('exception')
+fatal = log_wrapper('fatal')
+log = log_wrapper('log')
+
+DEBUG = log_wrapper('DEBUG')
+INFO = log_wrapper('INFO')
+WARNING = log_wrapper('WARNING')
+WARN = log_wrapper('WARN')
+ERROR = log_wrapper('ERROR')
+FATAL = log_wrapper('FATAL')
 
 _level_names = {
     DEBUG: 'DEBUG',
@@ -85,8 +109,7 @@ _level_names = {
 
 _level_letters = [name[0] for name in _level_names.values()]
 
-GLOG_PREFIX_REGEX = (
-    r"""
+GLOG_PREFIX_REGEX = (r"""
     (?x) ^
     (?P<severity>[%s])
     (?P<month>\d\d)(?P<day>\d\d)\s
@@ -111,6 +134,7 @@ class CaptureWarningsFlag(flags.BooleanFlag):
         flags.BooleanFlag.Parse(self, arg)
         logging.captureWarnings(self.value)
 
+
 flags.DEFINE_flag(CaptureWarningsFlag())
 
 
@@ -123,12 +147,13 @@ class VerbosityParser(flags.ArgumentParser):
             # Look up the name for this level (DEBUG, INFO, etc) if it exists
             try:
                 level = logging._levelNames.get(intarg, intarg)
-            except AttributeError:   # This was renamed somewhere b/w 2.7 and 3.4
+            except AttributeError:  # This was renamed somewhere b/w 2.7 and 3.4
                 level = logging._levelToName.get(intarg, intarg)
         except ValueError:
             level = arg
         setLevel(level)
         return level
+
 
 flags.DEFINE(
     parser=VerbosityParser(),
@@ -137,9 +162,9 @@ flags.DEFINE(
     default=logging.INFO,
     help='Logging verbosity')
 
-
 # Define functions emulating C++ glog check-macros
 # https://htmlpreview.github.io/?https://github.com/google/glog/master/doc/glog.html#check
+
 
 def format_stacktrace(stack):
     """Print a stack trace that is easier to read.
