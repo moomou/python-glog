@@ -1,11 +1,12 @@
 """A simple Google-style logging wrapper."""
 
+import hashlib
+import inspect
 import logging
-import time
-import traceback
 import os
 import random
-import hashlib
+import time
+import traceback
 from collections import defaultdict
 
 import gflags as flags
@@ -38,13 +39,19 @@ class GlogFormatter(logging.Formatter):
             level = GlogFormatter.LEVEL_MAP[record.levelno]
         except KeyError:
             level = '?'
+
+        # 2 represents line at caller
+        callerframerecord = inspect.stack()[2]  # 0 represents this line
+        frame = callerframerecord[0]
+        frame_info = inspect.getframeinfo(frame)
+
         date = time.localtime(record.created)
         date_usec = (record.created - int(record.created)) * 1e6
         record_message = '%c%02d%02d %02d:%02d:%02d.%06d %s %s:%d] %s' % (
             level, date.tm_mon, date.tm_mday, date.tm_hour, date.tm_min,
             date.tm_sec, date_usec, record.process
-            if record.process is not None else '?????', record.filename,
-            record.lineno, format_message(record))
+            if record.process is not None else '?????', frame_info.filename,
+            frame_info.lineno, format_message(record))
         record.getMessage = lambda: record_message
         return logging.Formatter.format(self, record)
 
