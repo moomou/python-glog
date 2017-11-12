@@ -41,7 +41,7 @@ class GlogFormatter(logging.Formatter):
             level = '?'
 
         # 2 represents line at caller
-        callerframerecord = inspect.stack()[2]  # 0 represents this line
+        callerframerecord = inspect.stack()[-2]  # 0 represents this line
         frame = callerframerecord[0]
         frame_info = inspect.getframeinfo(frame)
 
