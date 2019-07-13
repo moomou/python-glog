@@ -1,5 +1,5 @@
 """A simple Google-style logging wrapper."""
-
+import sys
 import hashlib
 import inspect
 import logging
@@ -11,12 +11,14 @@ from collections import defaultdict
 
 import gflags as flags
 
+from .noop import noOper
+
 FLAGS = flags.FLAGS
 
 
 def format_message(record):
     try:
-        record_message = '%s' % (record.msg % record.args)
+        record_message = "%s" % (record.msg % record.args)
     except TypeError:
         record_message = record.msg
     return record_message
@@ -24,11 +26,11 @@ def format_message(record):
 
 class GlogFormatter(logging.Formatter):
     LEVEL_MAP = {
-        logging.FATAL: 'F',  # FATAL is alias of CRITICAL
-        logging.ERROR: 'E',
-        logging.WARN: 'W',
-        logging.INFO: 'I',
-        logging.DEBUG: 'D'
+        logging.FATAL: "F",  # FATAL is alias of CRITICAL
+        logging.ERROR: "E",
+        logging.WARN: "W",
+        logging.INFO: "I",
+        logging.DEBUG: "D",
     }
 
     def __init__(self):
@@ -38,7 +40,7 @@ class GlogFormatter(logging.Formatter):
         try:
             level = GlogFormatter.LEVEL_MAP[record.levelno]
         except KeyError:
-            level = '?'
+            level = "?"
 
         # 2 represents line at caller
         callerframerecord = inspect.stack()[-1]  # 0 represents this line
@@ -47,11 +49,19 @@ class GlogFormatter(logging.Formatter):
 
         date = time.localtime(record.created)
         date_usec = (record.created - int(record.created)) * 1e6
-        record_message = '%c%02d%02d %02d:%02d:%02d.%06d %s %s:%d] %s' % (
-            level, date.tm_mon, date.tm_mday, date.tm_hour, date.tm_min,
-            date.tm_sec, date_usec, record.process
-            if record.process is not None else '?????', frame_info.filename,
-            frame_info.lineno, format_message(record))
+        record_message = "%c%02d%02d %02d:%02d:%02d.%06d %s %s:%d] %s" % (
+            level,
+            date.tm_mon,
+            date.tm_mday,
+            date.tm_hour,
+            date.tm_min,
+            date.tm_sec,
+            date_usec,
+            record.process if record.process is not None else "?????",
+            frame_info.filename,
+            frame_info.lineno,
+            format_message(record),
+        )
         record.getMessage = lambda: record_message
         return logging.Formatter.format(self, record)
 
@@ -62,7 +72,7 @@ handler = logging.StreamHandler()
 
 def setLevel(newlevel):
     logger.setLevel(newlevel)
-    logger.debug('Log level set to %s', newlevel)
+    logger.debug("Log level set to %s", newlevel)
 
 
 def init():
@@ -73,14 +83,14 @@ def log_wrapper(name):
     counter = defaultdict(int)
 
     def conditional_log(*args, **kwargs):
-        sampling = kwargs.pop('sampling', 100)
-        first_n = kwargs.pop('first_n', -1)
+        sampling = kwargs.pop("sampling", 100)
+        first_n = kwargs.pop("first_n", -1)
 
         if sampling < 100:
             if sampling < random.random() * 100:
                 return
         if first_n > 0:
-            key = hashlib.md5(args[0].encode('utf-8')).hexdigest()
+            key = hashlib.md5(args[0].encode("utf-8")).hexdigest()
             if counter[key] > first_n:
                 return
             counter[key] += 1
@@ -90,33 +100,35 @@ def log_wrapper(name):
     return conditional_log
 
 
-debug = log_wrapper('debug')
-info = log_wrapper('info')
-warning = log_wrapper('warning')
-warn = log_wrapper('warning')
-error = log_wrapper('error')
-exception = log_wrapper('exception')
-fatal = log_wrapper('fatal')
-log = log_wrapper('log')
+debug = log_wrapper("debug")
+info = log_wrapper("info")
+warning = log_wrapper("warning")
+warn = log_wrapper("warning")
+error = log_wrapper("error")
+exception = log_wrapper("exception")
+fatal = log_wrapper("fatal")
+log = log_wrapper("log")
 
-DEBUG = log_wrapper('DEBUG')
-INFO = log_wrapper('INFO')
-WARNING = log_wrapper('WARNING')
-WARN = log_wrapper('WARN')
-ERROR = log_wrapper('ERROR')
-FATAL = log_wrapper('FATAL')
+DEBUG = log_wrapper("DEBUG")
+INFO = log_wrapper("INFO")
+WARNING = log_wrapper("WARNING")
+WARN = log_wrapper("WARN")
+ERROR = log_wrapper("ERROR")
+FATAL = log_wrapper("FATAL")
 
 _level_names = {
-    DEBUG: 'DEBUG',
-    INFO: 'INFO',
-    WARN: 'WARN',
-    ERROR: 'ERROR',
-    FATAL: 'FATAL'
+    DEBUG: "DEBUG",
+    INFO: "INFO",
+    WARN: "WARN",
+    ERROR: "ERROR",
+    FATAL: "FATAL",
 }
 
 _level_letters = [name[0] for name in _level_names.values()]
 
-GLOG_PREFIX_REGEX = (r"""
+GLOG_PREFIX_REGEX = (
+    (
+        r"""
     (?x) ^
     (?P<severity>[%s])
     (?P<month>\d\d)(?P<day>\d\d)\s
@@ -125,7 +137,10 @@ GLOG_PREFIX_REGEX = (r"""
     (?P<process_id>-?\d+)\s
     (?P<filename>[a-zA-Z<_][\w._<>-]+):(?P<line>\d+)
     \]\s
-    """) % ''.join(_level_letters)
+    """
+    )
+    % "".join(_level_letters)
+)
 """Regex you can use to parse glog line prefixes."""
 
 handler.setFormatter(GlogFormatter())
@@ -134,8 +149,12 @@ logger.addHandler(handler)
 
 class CaptureWarningsFlag(flags.BooleanFlag):
     def __init__(self):
-        flags.BooleanFlag.__init__(self, 'glog_capture_warnings', True,
-                                   "Redirect warnings to log.warn messages")
+        flags.BooleanFlag.__init__(
+            self,
+            "glog_capture_warnings",
+            True,
+            "Redirect warnings to log.warn messages",
+        )
 
     def Parse(self, arg):
         flags.BooleanFlag.Parse(self, arg)
@@ -165,9 +184,10 @@ class VerbosityParser(flags.ArgumentParser):
 flags.DEFINE(
     parser=VerbosityParser(),
     serializer=flags.ArgumentSerializer(),
-    name='verbosity',
+    name="verbosity",
     default=logging.INFO,
-    help='Logging verbosity')
+    help="Logging verbosity",
+)
 
 # Define functions emulating C++ glog check-macros
 # https://htmlpreview.github.io/?https://github.com/google/glog/master/doc/glog.html#check
@@ -200,16 +220,19 @@ def check_failed(message):
     try:
         raise FailedCheckException(message)
     except FailedCheckException:
-        log_record = logger.makeRecord('CRITICAL', 50, filename, line_num,
-                                       message, None, None)
+        log_record = logger.makeRecord(
+            "CRITICAL", 50, filename, line_num, message, None, None
+        )
         handler.handle(log_record)
 
-        log_record = logger.makeRecord('DEBUG', 10, filename, line_num,
-                                       'Check failed here:', None, None)
+        log_record = logger.makeRecord(
+            "DEBUG", 10, filename, line_num, "Check failed here:", None, None
+        )
         handler.handle(log_record)
         for line in stacktrace_lines:
-            log_record = logger.makeRecord('DEBUG', 10, filename, line_num,
-                                           line, None, None)
+            log_record = logger.makeRecord(
+                "DEBUG", 10, filename, line_num, line, None, None
+            )
             handler.handle(log_record)
         raise
     return
@@ -277,3 +300,9 @@ def check_notnone(obj, message=None):
         if message is None:
             message = "Check failed: Object is None."
         check_failed(message)
+
+
+def lv(verbosity=0):
+    if os.environ.get("DEBUG", "0") >= str(verbosity):
+        return sys.modules[__name__]
+    return noOper

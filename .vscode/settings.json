@@ -1,0 +1,9 @@
+{
+    "workbench.colorCustomizations": {
+        "titleBar.activeBackground": "#e16df4",
+        "titleBar.inactiveBackground": "#e16df499",
+        "titleBar.activeForeground": "#15202b",
+        "titleBar.inactiveForeground": "#15202b99"
+    },
+    "python.pythonPath": "/usr/local/opt/python/bin/python3.6"
+}

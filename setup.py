@@ -3,21 +3,21 @@
 import os
 import setuptools
 
-VERSION = '0.3.1'
+VERSION = '0.0.1'
 
 README = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
 
 setuptools.setup(
-    name='glog',
-    author='Benjamin Staffin',
-    author_email='benley@gmail.com',
-    url='https://github.com/benley/python-glog',
+    name='glog2',
+    author='Paul M',
+    author_email='ppymou@gmail.com',
+    url='https://github.com/moomou/python-glog',
     install_requires=[
         'python-gflags>=3.1',
         'six',  # glog doesn't need six, but gflags 3.1 does and its distutils
                 # "requires" line apparently accomplishes nothing, so ...
     ],
-    description='Simple Google-style logging wrapper for Python.',
+    description='Simple Google-style logging wrapper for Python. Forked from benley/python-glog',
     long_description=README,
     py_modules=['glog'],
     license='BSD',
