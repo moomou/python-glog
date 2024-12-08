@@ -11,7 +11,7 @@ from collections import defaultdict
 
 import gflags as flags
 
-from noop import noOper
+from .noop import noOper
 
 FLAGS = flags.FLAGS
 
