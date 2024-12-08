@@ -11,9 +11,18 @@ from collections import defaultdict
 
 import gflags as flags
 
-from .noop import noOper
-
 FLAGS = flags.FLAGS
+
+
+def _noop(*args, **kwargs):
+    pass
+
+
+class NoOp:
+    def __getattr__(self, name):
+        return _noop
+
+noop = NoOp()
 
 
 def format_message(record):
@@ -305,4 +314,5 @@ def check_notnone(obj, message=None):
 def lv(verbosity=0):
     if os.environ.get("DEBUG", "0") >= str(verbosity):
         return sys.modules[__name__]
-    return noOper
+    return noop
+
